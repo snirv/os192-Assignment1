@@ -4,6 +4,8 @@
 #include "user.h"
 #include "fcntl.h"
 
+char* read_file(int fd);
+
 // Parsed command representation
 #define EXEC  1
 #define REDIR 2
@@ -65,7 +67,7 @@ runcmd(struct cmd *cmd)
   struct redircmd *rcmd;
 
   if(cmd == 0)
-    exit();
+    exit(0);
 
   switch(cmd->type){
   default:
@@ -74,8 +76,32 @@ runcmd(struct cmd *cmd)
   case EXEC:
     ecmd = (struct execcmd*)cmd;
     if(ecmd->argv[0] == 0)
-      exit();
+      exit(0);
     exec(ecmd->argv[0], ecmd->argv);
+    int path_fd = open("/path" ,O_RDONLY);
+      char* file = read_file(path_fd);
+//          printf(2,file);
+          close(path_fd);
+
+      while(*file != 0  && *file != '\n') {
+          char * path = malloc(100);
+          memset(path,0,100);
+          while (*file != ':') {
+              //printf(2,"file :%s \n",file);
+              char next_char[2];
+              next_char[0]= *file;
+              next_char[1]= 0;
+             // printf(2,"next char:%s \n",next_char);
+              strcat(path, next_char);
+              file++;
+          }
+          strcat(path, ecmd->argv[0]);
+          //printf(2,"path is : %s\n" ,path);
+          exec(path,ecmd->argv);
+          file++;
+          free(path);
+          //printf(2,"@@file :%d \n",*file);
+      }
     printf(2, "exec %s failed\n", ecmd->argv[0]);
     break;
 
@@ -84,7 +110,7 @@ runcmd(struct cmd *cmd)
     close(rcmd->fd);
     if(open(rcmd->file, rcmd->mode) < 0){
       printf(2, "open %s failed\n", rcmd->file);
-      exit();
+      exit(0);
     }
     runcmd(rcmd->cmd);
     break;
@@ -93,7 +119,7 @@ runcmd(struct cmd *cmd)
     lcmd = (struct listcmd*)cmd;
     if(fork1() == 0)
       runcmd(lcmd->left);
-    wait();
+    wait(0);
     runcmd(lcmd->right);
     break;
 
@@ -117,8 +143,8 @@ runcmd(struct cmd *cmd)
     }
     close(p[0]);
     close(p[1]);
-    wait();
-    wait();
+    wait(0);
+    wait(0);
     break;
 
   case BACK:
@@ -127,7 +153,35 @@ runcmd(struct cmd *cmd)
       runcmd(bcmd->cmd);
     break;
   }
-  exit();
+  exit(0);
+}
+
+char*
+read_file(int fd)
+{
+//    printf(2,"enter read file\n");
+    int byte_read;
+    char* file = malloc(32);
+    memset(file ,0 ,32);
+    char buf[2];
+    buf[0] = 0;
+    buf[1] = 0;
+
+    byte_read = read(fd,buf,1);
+//    printf(2,"num read:%d\n",byte_read);
+    while(byte_read > 0){
+        if(strlen(file)+byte_read >= 32){
+            char * new_file = malloc(strlen(file)+byte_read+1);
+            strcpy(new_file ,file);
+            free(file);
+            file = new_file;
+        }
+        strcat(file,buf);
+        byte_read = read(fd,buf,1);
+//        printf(2,"num read:%d\n",byte_read);
+    }
+//    printf(2,"path is: %s\n" , file);
+    return file;
 }
 
 int
@@ -146,6 +200,9 @@ main(void)
 {
   static char buf[100];
   int fd;
+    //TODO
+  //Open path file
+    // int path_fd = open("path", O_RDWR|O_CREATE);
 
   // Ensure that three file descriptors are open.
   while((fd = open("console", O_RDWR)) >= 0){
@@ -166,16 +223,16 @@ main(void)
     }
     if(fork1() == 0)
       runcmd(parsecmd(buf));
-    wait();
+    wait(0);
   }
-  exit();
+  exit(0);
 }
 
 void
 panic(char *s)
 {
   printf(2, "%s\n", s);
-  exit();
+  exit(0);
 }
 
 int

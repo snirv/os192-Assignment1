@@ -235,7 +235,7 @@ fork(void)
 // An exited process remains in the zombie state
 // until its parent calls wait() to find out it exited.
 void
-exit(void)
+exit(int status)
 {
   struct proc *curproc = myproc();
   struct proc *p;
@@ -273,6 +273,7 @@ exit(void)
 
   // Jump into the scheduler, never to return.
   curproc->state = ZOMBIE;
+  curproc->status =status;
   sched();
   panic("zombie exit");
 }
@@ -280,7 +281,7 @@ exit(void)
 // Wait for a child process to exit and return its pid.
 // Return -1 if this process has no children.
 int
-wait(void)
+wait(int* status)
 {
   struct proc *p;
   int havekids, pid;
@@ -305,6 +306,9 @@ wait(void)
         p->name[0] = 0;
         p->killed = 0;
         p->state = UNUSED;
+          if(status != null) {
+              *status = p->status;
+          }
         release(&ptable.lock);
         return pid;
       }
@@ -541,4 +545,31 @@ procdump(void)
     }
     cprintf("\n");
   }
+}
+
+
+int
+detach(int pid)
+{
+    struct proc *p;
+    struct proc *curproc = myproc();
+
+    acquire(&ptable.lock);
+        // Scan through table looking for  children with pid.
+        for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+            if(p->parent != curproc)
+                continue;
+            if(p->pid == pid){
+                // Found the pid.
+                p->parent = initproc;
+                release(&ptable.lock);
+                return 0;
+            }
+        }
+
+        // No child with pid pid.
+            release(&ptable.lock);
+            return -1;
+
+
 }
