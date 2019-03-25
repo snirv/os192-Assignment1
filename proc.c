@@ -8,9 +8,15 @@
 #include "proc.h"
 #include "spinlock.h"
 
+#define ROUND_ROBIN_POLICY 1
+#define PRIORITY_POLICY 2
+#define EX_PRIORITY_POLICY 3
+
 extern PriorityQueue pq;
 extern RoundRobinQueue rrq;
 extern RunningProcessesHolder rpholder;
+
+int scheduler_num = 1;
 
 long long getAccumulator(struct proc *p) {
 	//Implement this function, remove the panic line.
@@ -159,6 +165,7 @@ userinit(void)
   acquire(&ptable.lock);
 
   p->state = RUNNABLE;
+    move_to_runnable(p);
 
   release(&ptable.lock);
 }
@@ -225,6 +232,7 @@ fork(void)
   acquire(&ptable.lock);
 
   np->state = RUNNABLE;
+    move_to_runnable(np);
 
   release(&ptable.lock);
 
@@ -333,13 +341,14 @@ wait(int* status)
 //  - swtch to start running that process
 //  - eventually that process transfers control
 //      via swtch back to the scheduler.
+/* //origin scheduler
 void
 scheduler(void)
 {
   struct proc *p;
   struct cpu *c = mycpu();
   c->proc = 0;
-  
+
   for(;;){
     // Enable interrupts on this processor.
     sti();
@@ -367,6 +376,143 @@ scheduler(void)
     release(&ptable.lock);
 
   }
+}
+*/
+
+//the last function sharon made- drek
+
+//void
+//scheduler(void)
+//{
+//  struct proc *p;
+//  struct cpu *c = mycpu();
+//  c->proc = 0;
+//
+//  for(;;) {
+//      // Enable interrupts on this processor.
+//      sti();
+//
+//      acquire(&ptable.lock);
+//
+//      if (scheduler_num == ROUND_ROBIN_POLICY){
+//          if (!rrq.isEmpty()) {
+//              p = rrq.dequeue();
+//          } else{
+//              continue;
+//          }
+//      }
+//      else if (scheduler_num == PRIORITY_POLICY){
+//            panic("wtf");
+//      }
+//
+//
+//      // Switch to chosen process.  It is the process's job
+//      // to release ptable.lock and then reacquire it
+//      // before jumping back to us.
+//      c->proc = p;
+//      switchuvm(p);
+//      p->state = RUNNING;
+//      rpholder.add(p);
+//      swtch(&(c->scheduler), p->context);
+//      switchkvm();
+//
+//      // Process is done running for now.
+//      // It should have changed its p->state before coming back.
+//      c->proc = 0;
+//      release(&ptable.lock);
+//  }
+//}
+//
+
+
+
+
+
+
+
+
+
+void
+scheduler(void)
+{
+
+        struct proc *p;
+        struct cpu *c = mycpu();
+        c->proc = 0;
+
+    for(;;) {
+        // Enable interrupts on this processor.
+        sti();
+        acquire(&ptable.lock);
+        p = move_to_running();
+
+        if( p == null || p->state != RUNNABLE){
+            release(&ptable.lock);
+            continue;
+        }
+        //cprintf("proc name: %s\n",p->name);
+        c->proc = p;
+        switchuvm(p);
+        p->state = RUNNING;
+        rpholder.add(p);
+        swtch(&(c->scheduler), p->context);
+        switchkvm();
+
+        // Process is done running for now.
+        // It should have changed its p->state before coming back.
+        c->proc = 0;
+        release(&ptable.lock);
+    }
+}
+
+
+
+
+boolean
+move_to_runnable(struct proc* p) {
+    boolean success = false;
+
+    switch (scheduler_num) {
+        case ROUND_ROBIN_POLICY:
+           success = rrq.enqueue(p);
+            return success;
+        case PRIORITY_POLICY:
+            //success = pq.put(p);
+            cprintf("runnable!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+            break;
+        case EX_PRIORITY_POLICY :
+            cprintf("runnable!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+            //success = pq.put(p);
+            break;
+        default:
+            return success;
+    }
+    return success;
+
+}
+
+struct proc*
+move_to_running(void)
+{
+    struct proc* p;
+    switch (scheduler_num) {
+        case ROUND_ROBIN_POLICY:
+            if (!rrq.isEmpty()){
+                p = rrq.dequeue();
+                return p;
+            }
+            break;
+
+        case PRIORITY_POLICY:
+            cprintf("running!!!!!!!!!!!!!!!!!!!!!!!!!!!! sched_num:%d\n",scheduler_num);
+            break;
+        case EX_PRIORITY_POLICY :
+            cprintf("running!!!!!!!!!!!!!!!!!!!!!!!!!!!! sched_num:%d\n",scheduler_num);
+            break;
+        default:
+            return null;
+    }
+    return null;
 }
 
 // Enter scheduler.  Must hold only ptable.lock
@@ -400,7 +546,9 @@ void
 yield(void)
 {
   acquire(&ptable.lock);  //DOC: yieldlock
-  myproc()->state = RUNNABLE;
+    struct proc* p = myproc();
+    p->state = RUNNABLE;
+    move_to_runnable(p);
   sched();
   release(&ptable.lock);
 }
@@ -452,6 +600,7 @@ sleep(void *chan, struct spinlock *lk)
   // Go to sleep.
   p->chan = chan;
   p->state = SLEEPING;
+    rpholder.remove(p);
 
   sched();
 
@@ -474,8 +623,10 @@ wakeup1(void *chan)
   struct proc *p;
 
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
-    if(p->state == SLEEPING && p->chan == chan)
-      p->state = RUNNABLE;
+    if(p->state == SLEEPING && p->chan == chan) {
+        p->state = RUNNABLE;
+        move_to_runnable(p);
+    }
 }
 
 // Wake up all processes sleeping on chan.
@@ -500,8 +651,12 @@ kill(int pid)
     if(p->pid == pid){
       p->killed = 1;
       // Wake process from sleep if necessary.
-      if(p->state == SLEEPING)
-        p->state = RUNNABLE;
+      if(p->state == SLEEPING) {
+          p->state = RUNNABLE;
+          move_to_runnable(p);
+
+      }
+
       release(&ptable.lock);
       return 0;
     }
@@ -563,12 +718,14 @@ detach(int pid)
                 // Found the pid.
                 p->parent = initproc;
                 release(&ptable.lock);
+                cprintf("detach success\n");
                 return 0;
             }
         }
 
         // No child with pid pid.
             release(&ptable.lock);
+            cprintf("detach fail\n");
             return -1;
 
 
