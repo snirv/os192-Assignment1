@@ -163,7 +163,6 @@ userinit(void)
   // writes to be visible, and the lock is also needed
   // because the assignment might not be atomic.
   acquire(&ptable.lock);
-
   p->state = RUNNABLE;
     move_to_runnable(p);
 
@@ -232,7 +231,7 @@ fork(void)
   acquire(&ptable.lock);
 
   np->state = RUNNABLE;
-    move_to_runnable(np);
+  move_to_runnable(np);
 
   release(&ptable.lock);
 
@@ -427,11 +426,6 @@ scheduler(void)
 
 
 
-
-
-
-
-
 void
 scheduler(void)
 {
@@ -475,6 +469,9 @@ move_to_runnable(struct proc* p) {
     switch (scheduler_num) {
         case ROUND_ROBIN_POLICY:
            success = rrq.enqueue(p);
+            if(!success){
+                panic("fail to enqueue rr\n");
+            }
             return success;
         case PRIORITY_POLICY:
             //success = pq.put(p);
@@ -547,6 +544,9 @@ yield(void)
 {
   acquire(&ptable.lock);  //DOC: yieldlock
     struct proc* p = myproc();
+    if(p->state == RUNNING){
+        rpholder.remove(p);
+    }
     p->state = RUNNABLE;
     move_to_runnable(p);
   sched();
@@ -599,8 +599,12 @@ sleep(void *chan, struct spinlock *lk)
   }
   // Go to sleep.
   p->chan = chan;
+    //if moving from running
+    if(p->state == RUNNING){
+        rpholder.remove(p);
+    }
   p->state = SLEEPING;
-    rpholder.remove(p);
+
 
   sched();
 
@@ -650,6 +654,10 @@ kill(int pid)
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
     if(p->pid == pid){
       p->killed = 1;
+        // remove process from rpholder if necessary
+        if(p->state == RUNNING){
+            rpholder.remove(p);
+        }
       // Wake process from sleep if necessary.
       if(p->state == SLEEPING) {
           p->state = RUNNABLE;
