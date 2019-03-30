@@ -17,6 +17,7 @@ extern RoundRobinQueue rrq;
 extern RunningProcessesHolder rpholder;
 
 int scheduler_num = 2;
+long long time_quantums_passed = 0;
 
 long long getAccumulator(struct proc *p) {
     return p->accumulator;
@@ -106,6 +107,8 @@ found:
     //3.2
   p->priority = 5;
   p->accumulator = get_min_accumulator();
+  //3.3
+  p->last_time_quantum = 0;
 
   release(&ptable.lock);
 
@@ -518,7 +521,11 @@ move_to_running(void)
             }
             break;
         case EX_PRIORITY_POLICY :
-            cprintf("running!!!!!!!!!!!!!!!!!!!!!!!!!!!! sched_num:%d\n",scheduler_num);
+            if(!pq.isEmpty()){
+                p = pq.extractMin();
+                p->last_time_quantum = time_quantums_passed;
+                return p;
+            }
             break;
         default:
             return null;
@@ -560,6 +567,7 @@ yield(void)
     struct proc* p = myproc();
     if(p->state == RUNNING){
         rpholder.remove(p);
+        time_quantums_passed++;//3.3
     }
     move_to_runnable(p);//3.1
     p->state = RUNNABLE;
@@ -760,7 +768,11 @@ detach(int pid)
 
 void priority(int priority)
 {
-    if(priority > 10 || priority < 0){
+    int lower_bound = 1;
+    if (scheduler_num == EX_PRIORITY_POLICY){
+        lower_bound = 0;
+    }
+    if(priority > 10 || priority < lower_bound){
         panic("illegal priority!\n");
     }
     struct proc *p;
