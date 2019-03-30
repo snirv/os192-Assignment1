@@ -16,8 +16,8 @@ extern PriorityQueue pq;
 extern RoundRobinQueue rrq;
 extern RunningProcessesHolder rpholder;
 
-int scheduler_num = 3;
-long long time_quantums_passed = 0;
+int scheduler_num =EX_PRIORITY_POLICY;
+long long time_quantums_passed = 1;
 
 long long getAccumulator(struct proc *p) {
     return p->accumulator;
@@ -443,6 +443,7 @@ scheduler(void)
         struct proc *p_longet_time;
         struct cpu *c = mycpu();
         c->proc = 0;
+        boolean longest_init = false;
 
     for(;;) {
         // Enable interrupts on this processor.
@@ -451,18 +452,29 @@ scheduler(void)
         if ((scheduler_num == EX_PRIORITY_POLICY) && ( (time_quantums_passed % 100) == 0)) {
           p_longet_time = null;
           for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-             cprintf("enter for\n");
+                cprintf("enter for\n");
             if (p->state != RUNNABLE){
               continue;
             }
-            else if( (p_longet_time == null)  || ((p->last_time_quantum) < (p_longet_time->last_time_quantum))){
-              cprintf("enter big else\n");
-              p_longet_time=p;
+            else {
+                if(!longest_init){
+                 p_longet_time = p;
+                 cprintf("enter init\n"); 
+                }
+                cprintf("p id is %d\n",p->pid);
+                cprintf("longest quantum pid %d\n", p_longet_time->pid);
+                if((p->last_time_quantum) < (p_longet_time->last_time_quantum)){
+                  cprintf("enter #### else\n");
+                  p_longet_time=p;
+              }
             }
           }
+          cprintf("finish big else\n");
           p = p_longet_time;
           p->last_time_quantum = time_quantums_passed;
-          pq.extractProc(p);
+          if(!pq.isEmpty()){
+            pq.extractProc(p);
+            }
         }
         else {
             p = move_to_running();
