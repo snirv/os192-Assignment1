@@ -19,8 +19,7 @@ extern RunningProcessesHolder rpholder;
 int scheduler_num = 1;
 
 long long getAccumulator(struct proc *p) {
-	//Implement this function, remove the panic line.
-	panic("getAccumulator: not implemented\n");
+    return p->accumulator;
 }
 
 struct {
@@ -277,7 +276,9 @@ exit(int status)
         wakeup1(initproc);
     }
   }
-
+   if(curproc->state == RUNNING){
+       rpholder.remove(curproc);
+   }
   // Jump into the scheduler, never to return.
   curproc->state = ZOMBIE;
   curproc->status =status;
