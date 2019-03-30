@@ -121,8 +121,10 @@ int             wait(int*);
 void            wakeup(void*);
 void            yield(void);
 int             detach(int);
+void            priority(int);
 struct proc*    move_to_running(void);
 boolean         move_to_runnable(struct proc* p);
+long long       get_min_accumulator();
 
 // swtch.S
 void            swtch(struct context**, struct context*);

@@ -16,7 +16,7 @@ extern PriorityQueue pq;
 extern RoundRobinQueue rrq;
 extern RunningProcessesHolder rpholder;
 
-int scheduler_num = 1;
+int scheduler_num = 2;
 
 long long getAccumulator(struct proc *p) {
     return p->accumulator;
@@ -103,6 +103,9 @@ allocproc(void)
 found:
   p->state = EMBRYO;
   p->pid = nextpid++;
+    //3.2
+  p->priority = 5;
+  p->accumulator = get_min_accumulator();
 
   release(&ptable.lock);
 
@@ -156,14 +159,15 @@ userinit(void)
 
   safestrcpy(p->name, "initcode", sizeof(p->name));
   p->cwd = namei("/");
+  p->accumulator = 0;
 
   // this assignment to p->state lets other cores
   // run this process. the acquire forces the above
   // writes to be visible, and the lock is also needed
   // because the assignment might not be atomic.
   acquire(&ptable.lock);
+    move_to_runnable(p);//3.1
   p->state = RUNNABLE;
-    move_to_runnable(p);
 
   release(&ptable.lock);
 }
@@ -229,8 +233,9 @@ fork(void)
 
   acquire(&ptable.lock);
 
+    move_to_runnable(np);//3.1
   np->state = RUNNABLE;
-  move_to_runnable(np);
+
 
   release(&ptable.lock);
 
@@ -440,7 +445,7 @@ scheduler(void)
         sti();
         acquire(&ptable.lock);
         p = move_to_running();
-
+        //cprintf("p is: %d\n",p);
         if( p == null || p->state != RUNNABLE){
             release(&ptable.lock);
             continue;
@@ -471,12 +476,17 @@ move_to_runnable(struct proc* p) {
         case ROUND_ROBIN_POLICY:
            success = rrq.enqueue(p);
             if(!success){
-                panic("fail to enqueue rr\n");
+                panic("fail to enqueue RR\n");
             }
             return success;
         case PRIORITY_POLICY:
-            //success = pq.put(p);
-            cprintf("runnable!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+            if(p->status == RUNNING){
+                p->accumulator += p->priority;
+            }
+            success = pq.put(p);
+            if(!success){
+                panic("fail to enqueue PP\n");
+            }
             break;
         case EX_PRIORITY_POLICY :
             cprintf("runnable!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
@@ -502,7 +512,10 @@ move_to_running(void)
             break;
 
         case PRIORITY_POLICY:
-            cprintf("running!!!!!!!!!!!!!!!!!!!!!!!!!!!! sched_num:%d\n",scheduler_num);
+            if(!pq.isEmpty()){
+                p = pq.extractMin();
+                return p;
+            }
             break;
         case EX_PRIORITY_POLICY :
             cprintf("running!!!!!!!!!!!!!!!!!!!!!!!!!!!! sched_num:%d\n",scheduler_num);
@@ -548,8 +561,8 @@ yield(void)
     if(p->state == RUNNING){
         rpholder.remove(p);
     }
+    move_to_runnable(p);//3.1
     p->state = RUNNABLE;
-    move_to_runnable(p);
   sched();
   release(&ptable.lock);
 }
@@ -629,8 +642,10 @@ wakeup1(void *chan)
 
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
     if(p->state == SLEEPING && p->chan == chan) {
+        p->accumulator = get_min_accumulator();//3.2
+        move_to_runnable(p);//3.1
         p->state = RUNNABLE;
-        move_to_runnable(p);
+
     }
 }
 
@@ -661,8 +676,10 @@ kill(int pid)
         }
       // Wake process from sleep if necessary.
       if(p->state == SLEEPING) {
+          p->accumulator = get_min_accumulator();//3.2
+          move_to_runnable(p);//3.1
           p->state = RUNNABLE;
-          move_to_runnable(p);
+
 
       }
 
@@ -737,5 +754,54 @@ detach(int pid)
             cprintf("detach fail\n");
             return -1;
 
+
+}
+
+
+void priority(int priority)
+{
+    if(priority > 10 || priority < 0){
+        panic("illegal priority!\n");
+    }
+    struct proc *p;
+    struct proc *curproc = myproc();
+
+    acquire(&ptable.lock);
+    // Scan through table looking for curproc.
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+        if(p != curproc) {
+            continue;
+        }
+            p->priority = priority;
+            release(&ptable.lock);
+            cprintf("changed priority success\n");
+            return ;
+        }
+
+
+    //Proc not found
+    panic("priority change proc not found");
+
+}
+
+long long
+get_min_accumulator(){
+    long long min1 ,min2;
+    boolean bool1 ,bool2;
+    bool1 = pq.getMinAccumulator(&min1);
+    bool2 =rpholder.getMinAccumulator(&min2);
+    if(bool1 && bool2){
+        if(min1 > min2){
+            return min2;
+        }
+        return min1;
+    }
+    else if(bool1){
+        return min1;
+    } else if(bool2){
+        return min2;
+    } else {
+        return 0;
+    }
 
 }

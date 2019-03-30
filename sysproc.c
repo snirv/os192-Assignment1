@@ -106,3 +106,14 @@ sys_detach(void)
 
     return detach(pid);
 }
+
+
+void
+sys_priority(void)
+{
+    int pri;
+    if(argint(0, &pri) < 0)
+        return;
+
+    priority(pri);
+}
