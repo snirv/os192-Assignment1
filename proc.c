@@ -16,7 +16,7 @@ extern PriorityQueue pq;
 extern RoundRobinQueue rrq;
 extern RunningProcessesHolder rpholder;
 
-int scheduler_num = 2;
+int scheduler_num = 3;
 long long time_quantums_passed = 0;
 
 long long getAccumulator(struct proc *p) {
@@ -104,11 +104,11 @@ allocproc(void)
 found:
   p->state = EMBRYO;
   p->pid = nextpid++;
-    //3.2
+  //3.2
   p->priority = 5;
   p->accumulator = get_min_accumulator();
   //3.3
-  p->last_time_quantum = 0;
+  p->last_time_quantum = time_quantums_passed;
 
   release(&ptable.lock);
 
@@ -440,6 +440,7 @@ scheduler(void)
 {
 
         struct proc *p;
+        struct proc *p_longet_time;
         struct cpu *c = mycpu();
         c->proc = 0;
 
@@ -447,8 +448,29 @@ scheduler(void)
         // Enable interrupts on this processor.
         sti();
         acquire(&ptable.lock);
-        p = move_to_running();
+        if ((scheduler_num == EX_PRIORITY_POLICY) && ( (time_quantums_passed % 100) == 0)) {
+          p_longet_time = null;
+          for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+             cprintf("enter for\n");
+            if (p->state != RUNNABLE){
+              continue;
+            }
+            else if( (p_longet_time == null)  || ((p->last_time_quantum) < (p_longet_time->last_time_quantum))){
+              cprintf("enter big else\n");
+              p_longet_time=p;
+            }
+          }
+          p = p_longet_time;
+          p->last_time_quantum = time_quantums_passed;
+          pq.extractProc(p);
+        }
+        else {
+            p = move_to_running();
+        }
+        
         //cprintf("p is: %d\n",p);
+
+
         if( p == null || p->state != RUNNABLE){
             release(&ptable.lock);
             continue;
@@ -492,8 +514,13 @@ move_to_runnable(struct proc* p) {
             }
             break;
         case EX_PRIORITY_POLICY :
-            cprintf("runnable!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
-            //success = pq.put(p);
+             if(p->status == RUNNING){
+                p->accumulator += p->priority;
+            }
+            success = pq.put(p);
+            if(!success){
+                panic("fail to enqueue EPP\n");
+            }
             break;
         default:
             return success;
