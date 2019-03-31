@@ -108,12 +108,24 @@ sys_detach(void)
 }
 
 
-void
+int
 sys_priority(void)
 {
     int pri;
     if(argint(0, &pri) < 0)
-        return;
+        return -1;
 
     priority(pri);
+    return 0;//sharon add
+}
+
+int
+sys_policy(void)
+{
+    int pol;
+    if(argint(0, &pol) < 0)
+        return -1;
+
+    policy(pol); //TODO fix
+    return 0;//sharon add
 }

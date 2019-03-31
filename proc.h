@@ -55,6 +55,7 @@ struct proc {
   long long accumulator;
   int priority;
   long long last_time_quantum;
+  int policy; //TODO fix
 };
 
 // Process memory is laid out contiguously, low addresses first:

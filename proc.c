@@ -461,15 +461,12 @@ scheduler(void)
                  p_longet_time = p;
                  cprintf("enter init\n"); 
                 }
-                cprintf("p id is %d\n",p->pid);
-                cprintf("longest quantum pid %d\n", p_longet_time->pid);
                 if((p->last_time_quantum) < (p_longet_time->last_time_quantum)){
                   cprintf("enter #### else\n");
                   p_longet_time=p;
               }
             }
           }
-          cprintf("finish big else\n");
           p = p_longet_time;
           p->last_time_quantum = time_quantums_passed;
           if(!pq.isEmpty()){
@@ -805,7 +802,8 @@ detach(int pid)
 }
 
 
-void priority(int priority)
+void 
+priority(int priority)
 {
     int lower_bound = 1;
     if (scheduler_num == EX_PRIORITY_POLICY){
@@ -842,7 +840,8 @@ get_min_accumulator(){
     bool1 = pq.getMinAccumulator(&min1);
     bool2 =rpholder.getMinAccumulator(&min2);
     if(bool1 && bool2){
-        if(min1 > min2){
+            policy(pol);
+if(min1 > min2){
             return min2;
         }
         return min1;
@@ -855,4 +854,32 @@ get_min_accumulator(){
         return 0;
     }
 
+}
+
+int
+policy(int pol){
+  if ((pol < ROUND_ROBIN_POLICY) || (pol > EX_PRIORITY_POLICY)){
+    panic("illigal policy num");
+    return -1;
+  }
+  if (scheduler_num == pol){ //nothing to change 
+    return 0;
+  }
+  if (pol == ROUND_ROBIN_POLICY){ //from 2 or 3 to 1
+    pq.switchToRoundRobinPolicy;
+    reset_accumulator(); // TODO
+    scheduler_num =pol;
+    return 0;
+  }
+  else{ 
+      if (scheduler_num == ROUND_ROBIN_POLICY) { // from 1 to 2 or 3
+        rrq.switchToPriorityQueuePolicy;
+      }
+
+      if (pol == PRIORITY_POLICY){
+        no_zero_priority();//TODO
+      }
+    scheduler_num= pol;
+    return 0;
+  }
 }
