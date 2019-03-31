@@ -31,4 +31,5 @@ SYSCALL(sleep)
 SYSCALL(uptime)
 SYSCALL(detach)
 SYSCALL(priority)
+SYSCALL(policy)
 

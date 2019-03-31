@@ -25,7 +25,7 @@ int sleep(int);
 int uptime(void);
 int detach(int);
 void priority(int);
-void policy(int);
+int policy(int);
 
 // ulib.c
 int stat(const char*, struct stat*);

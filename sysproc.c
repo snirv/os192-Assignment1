@@ -122,10 +122,10 @@ sys_priority(void)
 int
 sys_policy(void)
 {
+  cprintf("enter sys_policy");
     int pol;
     if(argint(0, &pol) < 0)
         return -1;
 
-    policy(pol); //TODO fix
-    return 0;//sharon add
+    return policy(pol); 
 }

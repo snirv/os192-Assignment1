@@ -109,7 +109,10 @@ found:
   p->accumulator = get_min_accumulator();
   //3.3
   p->last_time_quantum = time_quantums_passed;
-
+  p->ctime = ticks; //3.5
+  p->stime =0;      //3.5
+  p->retime =0;     //3.5
+  p->rutime=0;      //3.5
   release(&ptable.lock);
 
   // Allocate kernel stack.
@@ -236,10 +239,9 @@ fork(void)
 
   acquire(&ptable.lock);
 
-    move_to_runnable(np);//3.1
+  move_to_runnable(np);//3.1
   np->state = RUNNABLE;
-
-
+  np->last_go_to_runnable = ticks;  //3.5
   release(&ptable.lock);
 
   return pid;
@@ -286,9 +288,11 @@ exit(int status)
   }
    if(curproc->state == RUNNING){
        rpholder.remove(curproc);
+       accumulate_time(curproc);
    }
   // Jump into the scheduler, never to return.
   curproc->state = ZOMBIE;
+  //curproc->ttime = cur_clock(); //TODO
   curproc->status =status;
   sched();
   panic("zombie exit");
@@ -452,17 +456,17 @@ scheduler(void)
         if ((scheduler_num == EX_PRIORITY_POLICY) && ( (time_quantums_passed % 100) == 0)) {
           p_longet_time = null;
           for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-                cprintf("enter for\n");
+                //cprintf("enter for\n");
             if (p->state != RUNNABLE){
               continue;
             }
             else {
                 if(!longest_init){
                  p_longet_time = p;
-                 cprintf("enter init\n"); 
+                 //cprintf("enter init\n"); 
                 }
                 if((p->last_time_quantum) < (p_longet_time->last_time_quantum)){
-                  cprintf("enter #### else\n");
+                  //cprintf("enter #### else\n");
                   p_longet_time=p;
               }
             }
@@ -488,6 +492,8 @@ scheduler(void)
         c->proc = p;
         switchuvm(p);
         p->state = RUNNING;
+        accumulate_time(p);
+        p->last_go_to_running = ticks;
         rpholder.add(p);
         swtch(&(c->scheduler), p->context);
         switchkvm();
@@ -498,6 +504,10 @@ scheduler(void)
         release(&ptable.lock);
     }
 }
+
+
+
+
 
 
 
@@ -604,9 +614,11 @@ yield(void)
     if(p->state == RUNNING){
         rpholder.remove(p);
         time_quantums_passed++;//3.3
+        accumulate_time(p);
     }
     move_to_runnable(p);//3.1
     p->state = RUNNABLE;
+    p->last_go_to_runnable = ticks;
   sched();
   release(&ptable.lock);
 }
@@ -661,7 +673,9 @@ sleep(void *chan, struct spinlock *lk)
     if(p->state == RUNNING){
         rpholder.remove(p);
     }
+  accumulate_time(p);
   p->state = SLEEPING;
+  p->last_go_to_sleep = ticks;
 
 
   sched();
@@ -688,7 +702,9 @@ wakeup1(void *chan)
     if(p->state == SLEEPING && p->chan == chan) {
         p->accumulator = get_min_accumulator();//3.2
         move_to_runnable(p);//3.1
+        accumulate_time(p);
         p->state = RUNNABLE;
+        p->last_go_to_runnable =ticks;
 
     }
 }
@@ -706,7 +722,7 @@ wakeup(void *chan)
 // Process won't exit until it returns
 // to user space (see trap in trap.c).
 int
-kill(int pid)
+kill(int pid) //TODO check if logit is correct- p->state = RUNNABLE; why only in if
 {
   struct proc *p;
 
@@ -722,7 +738,9 @@ kill(int pid)
       if(p->state == SLEEPING) {
           p->accumulator = get_min_accumulator();//3.2
           move_to_runnable(p);//3.1
+          accumulate_time(p);
           p->state = RUNNABLE;
+          p->last_go_to_runnable =ticks;
 
 
       }
@@ -840,8 +858,7 @@ get_min_accumulator(){
     bool1 = pq.getMinAccumulator(&min1);
     bool2 =rpholder.getMinAccumulator(&min2);
     if(bool1 && bool2){
-            policy(pol);
-if(min1 > min2){
+        if(min1 > min2){
             return min2;
         }
         return min1;
@@ -866,20 +883,58 @@ policy(int pol){
     return 0;
   }
   if (pol == ROUND_ROBIN_POLICY){ //from 2 or 3 to 1
-    pq.switchToRoundRobinPolicy;
-    reset_accumulator(); // TODO
+    pq.switchToRoundRobinPolicy();
+    reset_accumulator();
     scheduler_num =pol;
     return 0;
   }
   else{ 
       if (scheduler_num == ROUND_ROBIN_POLICY) { // from 1 to 2 or 3
-        rrq.switchToPriorityQueuePolicy;
+        rrq.switchToPriorityQueuePolicy();
       }
 
       if (pol == PRIORITY_POLICY){
-        no_zero_priority();//TODO
+        no_zero_priority();
       }
     scheduler_num= pol;
     return 0;
+  }
+}
+
+int 
+reset_accumulator(void){
+  struct proc *p;
+  acquire(&ptable.lock);
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+    p->accumulator = 0;  
+  } 
+  release(&ptable.lock);
+  return 0;
+}
+
+int
+no_zero_priority(void){
+  struct proc *p;
+  acquire(&ptable.lock);
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+    if(p->priority == 0){
+      p->priority =1;
+    }  
+  } 
+  release(&ptable.lock);
+  return 0;
+}
+
+
+boolean
+accumulate_time(struct proc *p){
+  if (p->status == RUNNING){
+    p->rutime += (ticks - p->last_go_to_running);
+  }
+  else if (p->status == RUNNABLE){
+    p->retime += (ticks - p->last_go_to_runnable);
+  }
+  else if (p->status == SLEEPING){
+    p->stime += (ticks - p->last_go_to_sleep);
   }
 }
