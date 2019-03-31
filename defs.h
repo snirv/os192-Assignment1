@@ -128,7 +128,7 @@ long long       get_min_accumulator();
 int             policy(int);
 int             reset_accumulator(void);
 int             no_zero_priority(void); 
-boolean         accumulate_time(struct proc*);
+void            accumulate_time(struct proc*);
 
 // swtch.S
 void            swtch(struct context**, struct context*);

@@ -926,8 +926,8 @@ no_zero_priority(void){
 }
 
 
-boolean
-accumulate_time(struct proc *p){
+void
+accumulate_time(struct proc* p){
   if (p->status == RUNNING){
     p->rutime += (ticks - p->last_go_to_running);
   }

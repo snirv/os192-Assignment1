@@ -126,6 +126,6 @@ sys_policy(void)
     int pol;
     if(argint(0, &pol) < 0)
         return -1;
-
-    return policy(pol); 
+    policy(pol);
+    return 0;  
 }
