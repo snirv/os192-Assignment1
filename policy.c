@@ -10,6 +10,5 @@ main(int argc, char **argv)
     exit(-1);
   }
    printf(2, "enter syscall policy\n");
-    policy(atoi(argv[1]));
-    exit(0);
+    exit(policy(atoi(argv[1])));
 }

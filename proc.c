@@ -463,6 +463,7 @@ scheduler(void)
             else {
                 if(!longest_init){
                  p_longet_time = p;
+                 longest_init = true;
                  //cprintf("enter init\n"); 
                 }
                 if((p->last_time_quantum) < (p_longet_time->last_time_quantum)){
@@ -876,14 +877,16 @@ get_min_accumulator(){
 int
 policy(int pol){
   if ((pol < ROUND_ROBIN_POLICY) || (pol > EX_PRIORITY_POLICY)){
-    panic("illigal policy num");
+    panic("illigal policy num\n");
     return -1;
   }
   if (scheduler_num == pol){ //nothing to change 
     return 0;
   }
   if (pol == ROUND_ROBIN_POLICY){ //from 2 or 3 to 1
-    pq.switchToRoundRobinPolicy();
+    if (pq.switchToRoundRobinPolicy() == false){
+      panic("did not succseed to change data structure\n");
+    }
     reset_accumulator();
     scheduler_num =pol;
     return 0;
