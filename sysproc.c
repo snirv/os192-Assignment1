@@ -122,10 +122,23 @@ sys_priority(void)
 int
 sys_policy(void)
 {
-  cprintf("enter sys_policy");
+  cprintf("enter sys_policy\n");
     int pol;
     if(argint(0, &pol) < 0)
         return -1;
     policy(pol);
     return 0;  
+}
+
+int
+sys_wait_stat(void)
+{
+    int* status = 0;
+    struct perf * performance;
+    if(argint(0, status) < 0)
+        return -1;
+
+    if(argptr(1, (void*)&performance, sizeof(*performance)) < 0)
+        return -1;
+    return wait_stat(status , performance);
 }

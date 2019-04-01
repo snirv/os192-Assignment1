@@ -23,3 +23,4 @@
 #define SYS_detach 22
 #define SYS_priority 23
 #define SYS_policy 24
+#define SYS_wait_stat 25

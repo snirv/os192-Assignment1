@@ -1,3 +1,4 @@
+
 struct buf;
 struct context;
 struct file;
@@ -9,7 +10,7 @@ struct spinlock;
 struct sleeplock;
 struct stat;
 struct superblock;
-
+struct perf;
 // bio.c
 void            binit(void);
 struct buf*     bread(uint, uint);
@@ -122,6 +123,7 @@ void            wakeup(void*);
 void            yield(void);
 int             detach(int);
 void            priority(int);
+int             wait_stat(int*,struct perf *);
 struct proc*    move_to_running(void);
 boolean         move_to_runnable(struct proc* p);
 long long       get_min_accumulator();

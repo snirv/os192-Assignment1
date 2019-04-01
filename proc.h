@@ -36,6 +36,14 @@ struct context {
 
 enum procstate { UNUSED, EMBRYO, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
 
+struct perf {//3.5
+    int ctime;
+    int ttime;
+    int stime;
+    int retime;
+    int rutime;
+};
+
 // Per-process state
 struct proc {
   uint sz;                       // Size of process memory (bytes)
@@ -55,11 +63,12 @@ struct proc {
   long long accumulator;
   int priority;
   long long last_time_quantum;
-  int ctime;  //3.5
-  int ttime;  //3.5
-  int stime;  //3.5
-  int retime; //3.5
-  int rutime; //3.5
+//  int ctime;  //3.5
+//  int ttime;  //3.5
+//  int stime;  //3.5
+//  int retime; //3.5
+//  int rutime; //3.5
+  struct perf* perf; //3.5
   int last_go_to_sleep; //3.5
   int last_go_to_runnable; //3.5
   int last_go_to_running; //3.5
@@ -70,3 +79,4 @@ struct proc {
 //   original data and bss
 //   fixed-size stack
 //   expandable heap
+
