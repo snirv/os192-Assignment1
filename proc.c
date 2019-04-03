@@ -800,7 +800,7 @@ priority(int priority)
         lower_bound = 0;
     }
     if(priority > 10 || priority < lower_bound){
-        panic("illegal priority!\n");
+        return;
     }
     struct proc *p;
     struct proc *curproc = myproc();
