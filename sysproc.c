@@ -28,10 +28,16 @@ int
 sys_wait(void)
 {
   int* status = 0;
-  if(argint(0, status) < 0)
-    return -1;
-  return wait(status);
+ if(argptr(1, (void*)&status, sizeof(*status)) < 0)
+        return -1;
+    return wait(status);
 }
+
+
+//   if(argint(0, status) < 0)
+//     return -1;
+//   return wait(status);
+// }
 
 int
 sys_kill(void)
@@ -122,7 +128,7 @@ sys_priority(void)
 int
 sys_policy(void)
 {
-  cprintf("enter sys_policy\n");
+  //cprintf("enter sys_policy\n");
     int pol;
     if(argint(0, &pol) < 0)
         return -1;
