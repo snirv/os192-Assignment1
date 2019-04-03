@@ -47,6 +47,9 @@ int main(void) {
     }
     if(pid == 0){
         sleep(100);
+        for (int i = 0; i <1000000 ; ++i) {
+            i++;
+        }
     }
     exit(0);
 }

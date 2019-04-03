@@ -485,8 +485,8 @@ scheduler(void)
         //cprintf("proc name: %s\n",p->name);
         c->proc = p;
         switchuvm(p);
-        p->state = RUNNING;
         accumulate_time(p);
+        p->state = RUNNING;
         p->last_go_to_running = ticks;
         rpholder.add(p);
         swtch(&(c->scheduler), p->context);
@@ -604,8 +604,9 @@ yield(void)
         rpholder.remove(p);
         time_quantums_passed++;//3.3
 //        cprintf("time qunta is :%d\n",time_quantums_passed);
-        accumulate_time(p);
+//        accumulate_time(p);
     }
+    accumulate_time(p);
     move_to_runnable(p);//3.1
     p->state = RUNNABLE;
     p->last_go_to_runnable = ticks;
@@ -922,13 +923,13 @@ no_zero_priority(void){
 
 void
 accumulate_time(struct proc* p){
-  if (p->status == RUNNING){
+  if (p->state == RUNNING){
     p->rutime += (ticks - p->last_go_to_running);
   }
-  else if (p->status == RUNNABLE){
+  else if (p->state == RUNNABLE){
      p->retime += (ticks - p->last_go_to_runnable);
   }
-  else if (p->status == SLEEPING){
+  else if (p->state == SLEEPING){
     p->stime += (ticks - p->last_go_to_sleep);
   }
 }
