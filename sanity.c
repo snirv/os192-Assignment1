@@ -3,10 +3,17 @@
 //
 #include "types.h"
 #include "user.h"
+struct perf {
+    int ctime;                     // Creation time
+    int ttime;                     // Termination time
+    int stime;                     // The total time spent in the SLEEPING state
+    int retime;                    // The total time spent in the RUNNABLE state
+    int rutime;                    // The total time spent in the RUNNING state
+};
 
 
 int main(void) {
-      int pid;
+     int pid;
 //    int first_status;
 //    int second_status;
 //    int third_status;
@@ -23,14 +30,23 @@ int main(void) {
 //        // have a child with this pid.
 //    }
     printf(1,"start pref test\n");
-    struct perf* perf;
+    struct perf perf;
+    printf(1,"perf1 : %d\n",perf);
     int status;
     pid = fork();
     if(pid > 0 ){
-        wait_stat(&status,perf);
+       status = wait_stat(&status,&perf);
+        printf(1,"perf : %d\n",perf);
+        printf(1,"child pid : %d\n",pid);
+        printf(1,"status: %d\n",status);
+        printf(1,"perf ttime: %d\n",perf.ttime);
+        printf(1,"perf stime: %d\n",perf.stime);
+        printf(1,"perf rutime: %d\n",perf.rutime);
+        printf(1,"perf retime: %d\n",perf.retime);
+        printf(1,"perf ctime: %d\n",perf.ctime);
     }
     if(pid == 0){
-        sleep(1);
+        sleep(100);
     }
     exit(0);
 }
