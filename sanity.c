@@ -31,14 +31,14 @@ int main(void) {
 //    }
     printf(1,"start pref test\n");
     struct perf perf;
-    printf(1,"perf1 : %d\n",perf);
+    printf(1,"perf1 : %x\n",&perf);
     int status;
     pid = fork();
     if(pid > 0 ){
        status = wait_stat(&status,&perf);
-        printf(1,"perf : %d\n",perf);
-        printf(1,"child pid : %d\n",pid);
-        printf(1,"status: %d\n",status);
+
+//        printf(1,"child pid : %d\n",pid);
+//        printf(1,"status: %d\n",status);
         printf(1,"perf ttime: %d\n",perf.ttime);
         printf(1,"perf stime: %d\n",perf.stime);
         printf(1,"perf rutime: %d\n",perf.rutime);

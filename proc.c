@@ -110,10 +110,15 @@ found:
     p->accumulator = get_min_accumulator();
     //3.3
     p->last_time_quantum = time_quantums_passed;
-    //  p->perf->ctime = ticks; //3.5
-//  p->perf->stime =0;      //3.5
-//  p->perf->retime =0;     //3.5
-//  p->perf->rutime=0;      //3.5
+    p->last_go_to_runnable = 0 ;
+    p->last_go_to_running = 0;
+    p->last_go_to_sleep = 0;
+
+      p->ctime = ticks; //3.5
+    p->stime =0;      //3.5
+    p->retime =0;     //3.5
+    p->rutime=0;      //3.5
+    p->ttime = 0;
 
   // Allocate kernel stack.
   if((p->kstack = kalloc()) == 0){
@@ -135,10 +140,20 @@ found:
   p->context = (struct context*)sp;
   memset(p->context, 0, sizeof *p->context);
   p->context->eip = (uint)forkret;
+
     //3.5 init for pref sturct
-    sp -= sizeof *p->perf;
-    p->perf = (struct perf*)sp;
-    memset(p->perf, 0, sizeof *p->perf);
+//    sp -= sizeof *p->perf;
+//    p->perf = (struct perf*)sp;
+//    memset(p->perf, 0, sizeof *p->perf);
+
+//    p->perf->ctime = ticks;
+
+//    cprintf("context : %x\n",p->context);
+//    cprintf("perf ttime: %d\n",p->ttime);
+//    cprintf("perf stime: %d\n",p->stime);
+//    cprintf("perf rutime: %d\n",p->rutime);
+//    cprintf("perf retime: %d\n",p->retime);
+//    cprintf("perf ctime: %d\n",p->ctime);
 
   return p;
 }
@@ -178,7 +193,7 @@ userinit(void)
   acquire(&ptable.lock);
     move_to_runnable(p);//3.1
   p->state = RUNNABLE;
-
+  p->last_go_to_runnable = ticks;
   release(&ptable.lock);
 }
 
@@ -217,7 +232,12 @@ fork(void)
   if((np = allocproc()) == 0){
     return -1;
   }
-
+//    cprintf("perf in frok() new proc : %x\n",np);
+//    cprintf("perf ttime: %d\n",np->ttime);
+//    cprintf("perf stime: %d\n",np->stime);
+//    cprintf("perf rutime: %d\n",np->rutime);
+//    cprintf("perf retime: %d\n",np->retime);
+//    cprintf("perf ctime: %d\n",np->ctime);
   // Copy process state from proc.
   if((np->pgdir = copyuvm(curproc->pgdir, curproc->sz)) == 0){
     kfree(np->kstack);
@@ -248,6 +268,13 @@ fork(void)
   np->last_go_to_runnable = ticks;  //3.5
   release(&ptable.lock);
 
+//    cprintf("perf in fork() curroroc: %x\n",curproc);
+//    cprintf("perf ttime: %d\n",curproc->ttime);
+//    cprintf("perf stime: %d\n",curproc->stime);
+//    cprintf("perf rutime: %d\n",curproc->rutime);
+//    cprintf("perf retime: %d\n",curproc->retime);
+//    cprintf("perf ctime: %d\n",curproc->ctime);
+
   return pid;
 }
 
@@ -272,7 +299,8 @@ exit(int status)
     }
   }
 
-  begin_op();
+
+    begin_op();
   iput(curproc->cwd);
   end_op();
   curproc->cwd = 0;
@@ -296,7 +324,7 @@ exit(int status)
    }
   // Jump into the scheduler, never to return.
   curproc->state = ZOMBIE;
-  //curproc->ttime = cur_clock(); //TODO
+  curproc->ttime = ticks;//3.5
   curproc->status =status;
   sched();
   panic("zombie exit");
@@ -895,13 +923,13 @@ no_zero_priority(void){
 void
 accumulate_time(struct proc* p){
   if (p->status == RUNNING){
-    p->perf->rutime += (ticks - p->last_go_to_running);
+    p->rutime += (ticks - p->last_go_to_running);
   }
   else if (p->status == RUNNABLE){
-    p->perf->retime += (ticks - p->last_go_to_runnable);
+     p->retime += (ticks - p->last_go_to_runnable);
   }
   else if (p->status == SLEEPING){
-    p->perf->stime += (ticks - p->last_go_to_sleep);
+    p->stime += (ticks - p->last_go_to_sleep);
   }
 }
 
@@ -936,7 +964,17 @@ wait_stat(int* status, struct perf * performance)//3.5
                     *status = p->status;
                 }
                 if(performance !=null){
-                    *performance = *p->perf;
+                    cprintf("perf in wait stat : %x\n",p);
+                    cprintf("perf ttime: %d\n",p->ttime);
+                    cprintf("perf stime: %d\n",p->stime);
+                    cprintf("perf rutime: %d\n",p->rutime);
+                    cprintf("perf retime: %d\n",p->retime);
+                    cprintf("perf ctime: %d\n",p->ctime);
+                    performance->ttime = p->ttime;
+                    performance->stime = p->stime;
+                    performance->rutime = p->rutime;
+                    performance->retime = p->retime;
+                    performance->ctime = p->ctime;
                 }
                 release(&ptable.lock);
                 return pid;

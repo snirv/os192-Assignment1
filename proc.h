@@ -63,12 +63,12 @@ struct proc {
   long long accumulator;
   int priority;
   long long last_time_quantum;
-//  int ctime;  //3.5
-//  int ttime;  //3.5
-//  int stime;  //3.5
-//  int retime; //3.5
-//  int rutime; //3.5
-  struct perf* perf; //3.5
+  int ctime;  //3.5
+  int ttime;  //3.5
+  int stime;  //3.5
+  int retime; //3.5
+  int rutime; //3.5
+//  struct perf* perf; //3.5
   int last_go_to_sleep; //3.5
   int last_go_to_runnable; //3.5
   int last_go_to_running; //3.5
