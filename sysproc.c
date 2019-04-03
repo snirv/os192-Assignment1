@@ -28,7 +28,7 @@ int
 sys_wait(void)
 {
   int* status = 0;
- if(argptr(1, (void*)&status, sizeof(*status)) < 0)
+ if(argptr(0, (void*)&status, sizeof(int)) < 0)
         return -1;
     return wait(status);
 }
@@ -141,7 +141,7 @@ sys_wait_stat(void)
 {
     int* status = 0;
     struct perf * performance;
-    if(argint(0, status) < 0)
+    if(argptr(0, (void*)&status, sizeof(int)) < 0)
         return -1;
 
     if(argptr(1, (void*)&performance, sizeof(*performance)) < 0)

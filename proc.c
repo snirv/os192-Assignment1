@@ -146,14 +146,7 @@ found:
 //    p->perf = (struct perf*)sp;
 //    memset(p->perf, 0, sizeof *p->perf);
 
-//    p->perf->ctime = ticks;
 
-//    cprintf("context : %x\n",p->context);
-//    cprintf("perf ttime: %d\n",p->ttime);
-//    cprintf("perf stime: %d\n",p->stime);
-//    cprintf("perf rutime: %d\n",p->rutime);
-//    cprintf("perf retime: %d\n",p->retime);
-//    cprintf("perf ctime: %d\n",p->ctime);
 
   return p;
 }
@@ -232,12 +225,7 @@ fork(void)
   if((np = allocproc()) == 0){
     return -1;
   }
-//    cprintf("perf in frok() new proc : %x\n",np);
-//    cprintf("perf ttime: %d\n",np->ttime);
-//    cprintf("perf stime: %d\n",np->stime);
-//    cprintf("perf rutime: %d\n",np->rutime);
-//    cprintf("perf retime: %d\n",np->retime);
-//    cprintf("perf ctime: %d\n",np->ctime);
+
   // Copy process state from proc.
   if((np->pgdir = copyuvm(curproc->pgdir, curproc->sz)) == 0){
     kfree(np->kstack);
@@ -267,13 +255,6 @@ fork(void)
   np->state = RUNNABLE;
   np->last_go_to_runnable = ticks;  //3.5
   release(&ptable.lock);
-
-//    cprintf("perf in fork() curroroc: %x\n",curproc);
-//    cprintf("perf ttime: %d\n",curproc->ttime);
-//    cprintf("perf stime: %d\n",curproc->stime);
-//    cprintf("perf rutime: %d\n",curproc->rutime);
-//    cprintf("perf retime: %d\n",curproc->retime);
-//    cprintf("perf ctime: %d\n",curproc->ctime);
 
   return pid;
 }
@@ -797,14 +778,14 @@ detach(int pid)
                 // Found the pid.
                 p->parent = initproc;
                 release(&ptable.lock);
-                cprintf("detach success\n");
+//                cprintf("detach success\n");
                 return 0;
             }
         }
 
         // No child with pid pid.
             release(&ptable.lock);
-            cprintf("detach fail\n");
+//            cprintf("detach fail\n");
             return -1;
 
 
@@ -832,7 +813,7 @@ priority(int priority)
         }
             p->priority = priority;
             release(&ptable.lock);
-            cprintf("changed priority success\n");
+//            cprintf("changed priority success\n");
             return ;
         }
 
@@ -965,12 +946,6 @@ wait_stat(int* status, struct perf * performance)//3.5
                     *status = p->status;
                 }
                 if(performance !=null){
-                    cprintf("perf in wait stat : %x\n",p);
-                    cprintf("perf ttime: %d\n",p->ttime);
-                    cprintf("perf stime: %d\n",p->stime);
-                    cprintf("perf rutime: %d\n",p->rutime);
-                    cprintf("perf retime: %d\n",p->retime);
-                    cprintf("perf ctime: %d\n",p->ctime);
                     performance->ttime = p->ttime;
                     performance->stime = p->stime;
                     performance->rutime = p->rutime;
