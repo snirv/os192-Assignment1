@@ -8,15 +8,12 @@
 #include "proc.h"
 #include "spinlock.h"
 
-#define ROUND_ROBIN_POLICY 1
-#define PRIORITY_POLICY 2
-#define EX_PRIORITY_POLICY 3
 
 extern PriorityQueue pq;
 extern RoundRobinQueue rrq;
 extern RunningProcessesHolder rpholder;
 
-int scheduler_num = ROUND_ROBIN_POLICY;
+int scheduler_num = PRIORITY_POLICY;
 long long time_quantums_passed = 0;
 
 long long getAccumulator(struct proc *p) {
@@ -417,6 +414,7 @@ scheduler(void)
 //        boolean longest_init = false;
 
     for(;;) {
+
         // Enable interrupts on this processor.
         sti();
         acquire(&ptable.lock);
@@ -488,14 +486,17 @@ move_to_runnable(struct proc* p) {
 
     switch (scheduler_num) {
         case ROUND_ROBIN_POLICY:
+           // cprintf(" enter RRP\n");
            success = rrq.enqueue(p);
             if(!success){
                 panic("fail to enqueue RR\n");
             }
             return success;
         case PRIORITY_POLICY:
-            if(p->status == RUNNING){
+            //cprintf("enter PP\n");
+            if(p->state == RUNNING){
                 p->accumulator += p->priority;
+             //   cprintf("accumulator update : %d\n", p->accumulator);
             }
             success = pq.put(p);
             if(!success){
@@ -503,8 +504,9 @@ move_to_runnable(struct proc* p) {
             }
             break;
         case EX_PRIORITY_POLICY :
-             if(p->status == RUNNING){
+             if(p->state == RUNNING){
                 p->accumulator += p->priority;
+               //  cprintf("accumulator update : %d\n", p->accumulator);
             }
             success = pq.put(p);
             if(!success){
@@ -582,6 +584,7 @@ yield(void)
   acquire(&ptable.lock);  //DOC: yieldlock
     struct proc* p = myproc();
     if(p->state == RUNNING){
+       // cprintf("here!!!!!!!!\n");
         rpholder.remove(p);
         time_quantums_passed++;//3.3
 //        cprintf("time qunta is :%d\n",time_quantums_passed);
@@ -847,19 +850,35 @@ get_min_accumulator(){
 
 int
 policy(int pol){
+//    struct proc *p;
+//    acquire(&ptable.lock);
+//    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+//        cprintf("policy : %d \t pid: %d \t name: %s \t state: %d \t priority : %d \t accumulator: %d\n" ,scheduler_num,  p->pid ,p->name,p->state,p->priority,p->accumulator);
+//    }
+//    release(&ptable.lock);
+
+    //cprintf("start - policy is: %d\n", scheduler_num);
   if ((pol < ROUND_ROBIN_POLICY) || (pol > EX_PRIORITY_POLICY)){
-    panic("illigal policy num\n");
+    //cprintf("illigal policy num\n");
     return -1;
   }
-  if (scheduler_num == pol){ //nothing to change 
-    return 0;
+  if (scheduler_num == pol){ //nothing to change
+     // cprintf("same policy - policy is: %d\n", scheduler_num);
+
+      return 0;
   }
   if (pol == ROUND_ROBIN_POLICY){ //from 2 or 3 to 1
     if (pq.switchToRoundRobinPolicy() == false){
       panic("did not succseed to change data structure\n");
     }
     reset_accumulator();
+    //no_zero_priority(); //
     scheduler_num =pol;
+      //cprintf("policy changed 2||3 to 1 - policy is: %d\n", scheduler_num);
+
+
+
+
     return 0;
   }
   else{ 
@@ -870,11 +889,14 @@ policy(int pol){
       }
 
       if (pol == PRIORITY_POLICY){
+          //cprintf("no zero priority done\n");
         no_zero_priority();
       }
     scheduler_num= pol;
-    return 0;
+      //cprintf("policy changed else - policy is: %d\n", scheduler_num);
+      return 0;
   }
+
 }
 
 int 

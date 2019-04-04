@@ -13,4 +13,9 @@ typedef int            boolean;
 #define false 0
 #define true 1
 
+#define ROUND_ROBIN_POLICY 1
+#define PRIORITY_POLICY 2
+#define EX_PRIORITY_POLICY 3
+
+
 #endif
